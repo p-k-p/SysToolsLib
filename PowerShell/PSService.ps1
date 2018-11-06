@@ -262,7 +262,7 @@ Param(
   [Switch]$Version              # Get this script version
 )
 
-$scriptVersion = "2017-12-10"
+$scriptVersion = "2018-11-06"
 
 # This script name, with various levels of details
 $argv0 = Get-Item $MyInvocation.MyCommand.Definition
@@ -313,28 +313,10 @@ if ($Version) {
 #-----------------------------------------------------------------------------#
 
 Function Now {
-  Param (
-    [Switch]$ms,        # Append milliseconds
-    [Switch]$ns         # Append nanoseconds
-  )
-  $Date = Get-Date
-  $now = ""
-  $now += "{0:0000}-{1:00}-{2:00} " -f $Date.Year, $Date.Month, $Date.Day
-  $now += "{0:00}:{1:00}:{2:00}" -f $Date.Hour, $Date.Minute, $Date.Second
-  $nsSuffix = ""
-  if ($ns) {
-    if ("$($Date.TimeOfDay)" -match "\.\d\d\d\d\d\d") {
-      $now += $matches[0]
-      $ms = $false
-    } else {
-      $ms = $true
-      $nsSuffix = "000"
-    }
-  } 
-  if ($ms) {
-    $now += ".{0:000}$nsSuffix" -f $Date.MilliSecond
-  }
-  return $now
+  Param ()
+  
+  return [System.DateTime]::Now.ToString("dddd dd-MM-yyyy HH:mm:ss")
+
 }
 
 #-----------------------------------------------------------------------------#
