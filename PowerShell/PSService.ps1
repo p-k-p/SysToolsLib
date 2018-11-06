@@ -321,6 +321,85 @@ Function Now {
 
 #-----------------------------------------------------------------------------#
 #                                                                             #
+#   Function        Invoke-LogRoll                                            #
+#                                                                             #
+#   Description     Roll logfiles to a specified size and logcount            #
+#                                                                             #
+#   Arguments       See the Param() block                                     #
+#                                                                             #
+#   Notes           Function checks if file $fileName is larger than          #
+#                   the parameter $filesize and if it is it will roll a log   #
+#                   and delete the oldest log if there are more than          #
+#                   $logcount logs.                                           #
+#                                                                             #
+#   History                                                                   #
+#                                                                             #
+#   Example  Invoke-LogRoll -fileName $logfile -filesize 1mb -logcount 5      #
+#                                                                             #
+#-----------------------------------------------------------------------------#
+
+Function Invoke-LogRoll
+{ 
+    param([string]$fileName, [int64]$fileSize = 128kb , [int] $logcount = 5) 
+        
+    if (Test-Path $fileName) 
+    { 
+        $file = Get-ChildItem $filename
+
+        if ($file.length -ige $fileSize)
+        { 
+            $files = $file.Directory.GetFiles("$($file.Name)*") | Sort-Object -Property LastWriteTime 
+             
+            foreach ($i in $files.Count..1)
+            {
+                
+                $files = $file.Directory.GetFiles("$($file.Name)*") | Sort-Object -Property LastWriteTime
+                $operatingFile = $files.Where({$_.name -eq "$($file.Name).$i"})
+                $operatingFilenumber = 0
+                
+                if ($operatingfile) {
+                
+                    $operatingFilenumber = $operatingFile.name.trim($fileName)
+                
+                } 
+                
+                if (($operatingFilenumber -eq 0) -and ($i -ne 1) -and ($i -lt $logcount)) 
+                { 
+                    $operatingFilenumber = $i 
+                    $operatingFile = $files.Where({$_.name -eq "$($file.Name).$($i - 1)"})
+
+                    move-item $operatingFile.FullName -Destination "$($file.FullName).$operatingFilenumber" -Force 
+                } 
+                elseif ($i -ge $logcount) 
+                { 
+                    if ($operatingFilenumber -eq 0) 
+                    {  
+                        $operatingFilenumber = $i - 1 
+                        $operatingFile = $files.Where({$_.name -eq "$($file.Name).$operatingFilenumber"}) 
+                        
+                    } 
+                    remove-item $operatingFile.FullName -Force 
+                } 
+                elseif ($i -eq 1) 
+                { 
+                    $operatingFilenumber = 1 
+                    move-item $file.FullName -Destination "$($file.FullName).$operatingFilenumber" -Force 
+                } 
+                else 
+                { 
+                    $operatingFilenumber = $i + 1  
+                    $operatingFile = $files.Where({$_.name -eq "$($file.Name).$($i - 1)"})
+                     
+                    move-item $operatingFile.FullName -Destination "$($file.FullName).$operatingFilenumber" -Force    
+                } 
+            } 
+        } 
+    }   
+}
+
+
+#-----------------------------------------------------------------------------#
+#                                                                             #
 #   Function        Log                                                       #
 #                                                                             #
 #   Description     Log a string into the PSService.log file                  #
@@ -331,6 +410,7 @@ Function Now {
 #                   (Except if the string is empty: Then output a blank line.)#
 #                                                                             #
 #   History                                                                   #
+#    2018-11-06 Introduce logroll                                             #
 #    2016-06-05 JFL Also prepend the Process ID.                              #
 #    2016-06-08 JFL Allow outputing blank lines.                              #
 #                                                                             #
@@ -344,10 +424,12 @@ Function Log () {
   if (!(Test-Path $logDir)) {
     New-Item -ItemType directory -Path $logDir | Out-Null
   }
-  if ($String.length) {
+  if ($String.length -gt 0) {
     $string = "$(Now) $pid $currentUserName $string"
   }
-  $string | Out-File -Encoding ASCII -Append "$logFile"
+  Add-Content $logFile -Value $string -Encoding Ascii
+  # Rotate and delete old Logs
+  Invoke-LogRoll -fileName $logFile
 }
 
 #-----------------------------------------------------------------------------#
